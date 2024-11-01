@@ -1,6 +1,9 @@
 from enum import Enum, auto
 from blessed import Terminal
+import rich
 import random
+
+import rich.panel
 
 term = Terminal()
 
@@ -41,6 +44,11 @@ def board():
             for j in i:
                 print(f"{j:>4}", end="")
             print()
+        for i in board.game:
+            for j in i:
+                print(term.move_xy(20, 10))
+                rich.print(rich.panel.Panel(f"{j}", expand=False), end="")
+            rich.print()
 
     def generate_value():
         pos = [(j, i) for j in range(4) for i in range(4) if board.game[j][i] == 0]
