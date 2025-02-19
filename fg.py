@@ -1,7 +1,10 @@
 from blessed import Terminal
 from rich.console import Console
 from rich.panel import Panel
+from rich.style import Style
 import time
+from typing import Union
+import attr
 
 # Inicializa `blessed` y `rich`
 term = Terminal()
@@ -18,24 +21,42 @@ matriz = [
 espacio_x = 12  # Ajuste horizontal (columna)
 espacio_y = 4   # Ajuste vertical (fila)
 
+@attr.s
+class Celda:
+    valor: Union[int, str] = attr.ib(converter=lambda x: str(x))
+    x: int = attr.ib(converter=lambda x: int(x), default=0)
+    y: int = attr.ib(converter=lambda x: int(x), default=0)
+    style: Style = attr.ib(default=None)
+
 # Función para imprimir toda la matriz con una celda móvil
 def imprimir_matriz(matriz, celda_pos):
     for i, fila in enumerate(matriz):
         for j, numero in enumerate(fila):
             x = j * espacio_x
             y = i * espacio_y
-            # Crear el panel con el número y destacar si es la posición actual
-            style = "bold red" if celda_pos == (i, j) else "bold green"
-            panel = Panel(str(numero), style=style, expand=False)
 
-            # Capturar el panel en texto formateado
-            with console.capture() as capture:
-                console.print(panel)
-            contenido_panel = capture.get()
+            celda = Celda(
+                valor=numero,
+                x=x,
+                y=y,
+                style="bold red" if celda_pos == (i, j) else "bold green"
+            )
 
-            # Imprimir el panel en la posición calculada
-            for k, linea in enumerate(contenido_panel.splitlines()):
-                print(term.move_xy(x, y + k) + linea)
+            print_celda(celda)
+
+def print_celda(celda: Celda, style: Style = None):
+    _style = celda.style if not style else style
+    panel = Panel(celda.valor, style=_style, expand=False)
+
+    with console.capture() as cap:
+        console.print(panel)
+    contenido_panel = cap.get()
+
+    for k, linea in enumerate(contenido_panel.splitlines()):
+        print(term.move_xy(celda.x, celda.y + k) + linea)
+
+def animate_celda_to(): 
+    ...              
 
 # Función para animar el movimiento de una celda en direcciones permitidas
 def animar_celda(matriz, inicio, fin, delay=0.3):
@@ -43,6 +64,7 @@ def animar_celda(matriz, inicio, fin, delay=0.3):
 
     # Bucle de animación
     while (i, j) != fin:
+        input()
         # Limpiar la pantalla y reimprimir la matriz con la posición actual de la celda destacada
         print(term.home + term.clear())
         imprimir_matriz(matriz, celda_pos=(i, j))
@@ -65,3 +87,5 @@ def animar_celda(matriz, inicio, fin, delay=0.3):
 # Ejecutar la animación
 with term.fullscreen(), term.cbreak(), term.hidden_cursor():
     animar_celda(matriz, inicio=(0, 0), fin=(2, 2), delay=0.2)
+
+    input()

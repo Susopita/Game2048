@@ -2,9 +2,12 @@ from enum import Enum, auto
 from blessed import Terminal
 import rich
 import random
-
+import shutil
 import rich.panel
+from rich.console import Console
+from rich.style import Style
 
+console = Console()
 term = Terminal()
 
 class Direction(Enum):
@@ -20,6 +23,21 @@ class Direction(Enum):
     LEFT = auto()
     DOWN = auto()
     UP = auto()
+
+colors = {
+    0: Style(color="rgb(205, 193, 180)"),
+    2: Style(color="rgb(238, 228, 218)"),
+    4: Style(color="rgb(237, 224, 200)"),
+    8: Style(color="rgb(242, 117, 121)"),
+    16: Style(color="rgb(245, 149, 99)"),
+    32: Style(color="rgb(246, 124, 95)"),
+    64: Style(color="rgb(247, 94, 59)"),
+    128: Style(color="rgb(237, 207, 114)"),
+    256: Style(color="rgb(238, 228, 218)"),
+    512: Style(color="rgb(238, 228, 218)"),
+    1024: Style(color="rgb(238, 228, 218)"),
+    2048: Style(color="rgb(238, 228, 218)")
+}
 
 def board():
     """
@@ -39,16 +57,31 @@ def board():
         return inicialBoard
 
     def print_():
-        print(term.move_xy(0, 1))
-        for i in board.game:
-            for j in i:
-                print(f"{j:>4}", end="")
-            print()
-        for i in board.game:
-            for j in i:
-                print(term.move_xy(20, 10))
-                rich.print(rich.panel.Panel(f"{j}", expand=False), end="")
-            rich.print()
+        """
+        0: rgb(205, 193, 180)
+        2: rgb(238, 228, 218)
+        4: rgb(237, 224, 200)
+        8: rgb(242, 117, 121)
+        16: rgb(245, 149, 99)
+        32: rgb(246, 124, 95)
+        64: rgb(247, 94, 59)
+        128: rgb(237, 207, 114)
+        """
+        for i, fila in enumerate(board.game):
+            for j, num in enumerate(fila):
+                x = board.config["x"] + board.config["padding_x"] * j
+                y = board.config["y"] + board.config["padding_y"] * i
+                with console.capture() as capture:
+                    console.print(rich.panel.Panel(f"    \n{num if num else ' ':^4}\n    ", expand=False))
+                contenido_panel = capture.get()
+
+                # Imprimir el panel en la posición calculada
+    
+                for k, linea in enumerate(contenido_panel.splitlines()):
+                    print(term.move_xy(x, y + k), end="")
+                    console.print(linea, style=colors[num], highlight=False)
+        print()
+            
 
     def generate_value():
         pos = [(j, i) for j in range(4) for i in range(4) if board.game[j][i] == 0]
@@ -67,38 +100,49 @@ def board():
 
         def rightShift(matrix: list):
             """
-            Right
+            Desplaza todos los numeros hacia la derecha y fusiona aquellos compatibles
             """
-            for i in matrix:
-                    print(i)
-                    
-                    for idx in range(2, -1, -1):
 
+            for i in matrix:
+                    
+                    for idx in range(len(i) - 2, -1, -1):
+
+                        # Obvia los espacios en blanco
                         if i[idx] == 0:
                             continue
 
                         nextIdx: int
 
-                        for nextIdx in range(idx + 1, 4):
+                        # Busca el indice hasta el cual se puede desplazar
+                        for nextIdx in range(idx + 1, len(i)):
                             if i[nextIdx] != 0:
                                 nextIdx -= 1
                                 break
                         
+                        # Intercambio el indice nuevo por el antiguo
                         if nextIdx != idx:
                             i[nextIdx] = i[idx]
                             i[idx] = 0
-
-        print(term.move_xy(0, 10))
+                        
+                        
+                        if i[nextIdx] and nextIdx + 1 < len(i) and i[nextIdx] == i[nextIdx + 1]:
+                            i[nextIdx + 1] *= 2
+                            i[nextIdx] = 0
+                        
+             
         match (direction):
+    
             case Direction.RIGHT:
                 rows = [i for i in board.game]
 
                 rightShift(rows)
-
+                
+                """
                 print() 
 
                 for i in rows:
                     print(i)
+                """
                     
                 board.game = rows
 
@@ -107,10 +151,12 @@ def board():
 
                 rightShift(rows)
 
+                """
                 print() 
 
                 for i in rows:
                     print(i)
+                """
 
                 board.game = [i[::-1] for i in rows]
 
@@ -119,10 +165,12 @@ def board():
 
                 rightShift(columns)
 
+                """
                 print() 
 
-                for i in columns:
+                for i in rows:
                     print(i)
+                """
                 
                 board.game = [[columns[j][i] for j in range(4)] for i in range(4)]
 
@@ -131,17 +179,19 @@ def board():
 
                 rightShift(columns)
 
+                """
                 print() 
-                
-                for i in columns:
+
+                for i in rows:
                     print(i)
+                """
                 
                 board.game = [[columns[j][i] for j in range(4)] for i in range(3, -1, -1)]
 
+
         generate_value()
 
-
-    def isWin():
+    def isWin() -> bool:
         for i in board.game:
             if 2048 in i:
                 return True
@@ -149,17 +199,26 @@ def board():
 
     if not hasattr(board, "game"):
         board.game = init()
-    board.print = print_
-    board.isWin = isWin
-    board.move = move
+        board.print = print_
+        board.isWin = isWin
+        board.move = move
+        pd_x = 8
+        pd_y = 5
+        board.config = {
+            "x": shutil.get_terminal_size().columns // 2 - pd_x * len(board.game) // 2,
+            "y": shutil.get_terminal_size().lines // 2 - pd_y * len(board.game) // 2,
+            "padding_x": pd_x,
+            "padding_y": pd_y,
+        }
 
     return board
 
-def player(name):
+
+def player():
     """
     Pequeña funcion para asignar un nombre al jugador.
     """
-    player.name = name
+    player.name = ""
     return player
 
 def Game2048():
@@ -211,21 +270,19 @@ def Game2048():
         setup()
         print(term.clear(), end="")
 
+        print(term.move_xy(board.config["x"], board.config["y"] - 1), end="")
         print("Tablero actual:")
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print()
-        print(f"Jugador: {Game2048.player.name}\nPresione una direccion: ↑ ↓ → ←")
+
+        print(term.move_xy(board.config["x"], board.config["y"] + board.config["padding_y"] * 4), end="")
+        print(f"Jugador: {Game2048.player.name}")
+        print(term.move_xy(board.config["x"], board.config["y"] + board.config["padding_y"] * 4 + 1), end="")
+        print("Presione una direccion: ↑ ↓ → ←")
 
         with term.cbreak():
             while True:
                 
                 # Aqui se imprime el tablero
-                Game2048.board().print()
+                Game2048.board.print()
 
                 key = term.inkey()
 
@@ -233,16 +290,16 @@ def Game2048():
                     match (key.name):
 
                         case "KEY_UP":
-                            Game2048.board().move(Direction.UP)
+                            Game2048.board.move(Direction.UP)
 
                         case "KEY_DOWN":
-                            Game2048.board().move(Direction.DOWN)
+                            Game2048.board.move(Direction.DOWN)
 
                         case "KEY_LEFT":
-                            Game2048.board().move(Direction.LEFT)
+                            Game2048.board.move(Direction.LEFT)
 
                         case "KEY_RIGHT":
-                            Game2048.board().move(Direction.RIGHT)
+                            Game2048.board.move(Direction.RIGHT)
 
                         case "KEY_ESCAPE":
                             print()
@@ -254,7 +311,7 @@ def Game2048():
                             print("Direccion no valida. Intente de nuevo")
                             print()
 
-                    if Game2048.board().isWin():
+                    if Game2048.board.isWin():
                         print("Has ganado!!!")
                         print("Juego terminado.\nbye byeee")
                         break
@@ -264,10 +321,10 @@ def Game2048():
                     print("Juego terminado.\nbye bye :b")
                     break
                    
- 
-    Game2048.start = start
-    Game2048.player = player
-    Game2048.board = board
+    if not hasattr(Game2048, "start"):      
+        Game2048.start = start
+        Game2048.player = player()
+        Game2048.board = board()
     
     return Game2048
 

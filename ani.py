@@ -2,6 +2,7 @@ from blessed import Terminal
 from rich.console import Console
 from rich.live import Live
 from rich.text import Text
+from rich.style import Style
 import time
 
 term = Terminal()
@@ -15,6 +16,6 @@ with term.fullscreen(), term.cbreak(), term.hidden_cursor():
     # Usar rich Live para actualización en tiempo real
     with Live(texto_animado, console=console, refresh_per_second=10) as live:
         for i in range(50):  # Simulación de 50 "frames"
-            texto_animado = Text(f"Posición del texto: {i}", style="bold cyan")
+            texto_animado = Text(f"Posición del texto: {i}", style=Style(color="rgb(255, 0, 0)"))
             live.update(texto_animado)  # Actualizar el contenido en cada iteración
             time.sleep(0.1)  # Control de velocidad de la animación
